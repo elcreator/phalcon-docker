@@ -1,22 +1,13 @@
-FROM php:8.3-zts-alpine3.16
+ARG PHP_VERSION=8.3
+FROM php:${PHP_VERSION}-zts-alpine3.16
 
 ARG PHALCON_VERSION=5.8.0
+# Base image contains own global PHP_VERSION variable with different value. This is not an accidental duplicate
+ARG PHP_VERSION=8.3
 
-RUN set -xe && \
-        cd / && \
-        docker-php-source extract && \
-        # Install ext-phalcon
-        curl -sSLO https://github.com/phalcon/cphalcon/archive/v${PHALCON_VERSION}.tar.gz && \
-        tar xzf /v${PHALCON_VERSION}.tar.gz && \
-        docker-php-ext-install -j $(getconf _NPROCESSORS_ONLN) \
-            /cphalcon-${PHALCON_VERSION}/build/phalcon \
-        && \
-        # Remove all temp files
-        rm -r \
-            /v${PHALCON_VERSION}.tar.gz \
-            /cphalcon-${PHALCON_VERSION} \
-        && \
-        docker-php-source delete && \
-        php -m
-
-COPY docker-phalcon-* /usr/local/bin/
+USER root
+ENV PHPIZE_DEPS="autoconf gcc g++ make"
+RUN apk add $PHPIZE_DEPS
+RUN ln -s /usr/local/bin/phpize /usr/local/bin/phpize${PHP_VERSION}
+RUN pecl -d php_suffix=${PHP_VERSION} install phalcon-${PHALCON_VERSION} >/tmp/phalcon.install.log 2>&1
+USER nobody
